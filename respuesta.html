@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Para Ambar...</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,400&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --carmesi: #8b0000;
+            --plata: #e6e6e6;
+            --fondo: #0a0303;
+            --resalte: #ff4d4d;
+        }
+        body, html {
+            margin: 0; padding: 0; width: 100%; height: 100%;
+            background-color: var(--fondo);
+            background-image: radial-gradient(circle at center, #1f0707 0%, var(--fondo) 100%);
+            color: var(--plata);
+            font-family: 'Cormorant Garamond', serif;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            overflow-x: hidden; overflow-y: auto;
+        }
+
+        #canvas-mariposas {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; pointer-events: none;
+        }
+
+        #contenedor-principal {
+            position: relative; z-index: 5; width: 85%; max-width: 850px;
+            padding: 40px; min-height: 60vh;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+        }
+
+        /* Botón de Inicio */
+        #btn-iniciar {
+            background: transparent; color: var(--carmesi); border: none;
+            font-family: 'Cinzel', serif; font-size: 22px; letter-spacing: 5px; cursor: pointer;
+            animation: respirar 2.5s infinite alternate; padding: 20px; outline: none;
+            text-shadow: 0 0 15px rgba(139,0,0,0.8);
+        }
+        @keyframes respirar { 
+            0% { opacity: 0.6; transform: scale(0.98); } 
+            100% { opacity: 1; text-shadow: 0 0 35px rgba(255,77,77,0.9); transform: scale(1.02); } 
+        }
+
+        /* Texto y Cursor CSS */
+        #texto-historia {
+            font-size: 25px; line-height: 1.8; font-weight: 300; text-align: justify;
+            text-shadow: 0 2px 8px rgba(0,0,0,0.9); margin-bottom: 40px;
+            min-height: 150px; width: 100%;
+        }
+        
+        #texto-historia::after {
+            content: '|'; color: var(--carmesi); animation: parpadeo 1s step-end infinite;
+            margin-left: 3px; font-weight: bold; text-shadow: 0 0 10px var(--carmesi);
+        }
+        .sin-cursor::after { display: none !important; }
+        @keyframes parpadeo { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+
+        /* Galería de Recuerdos */
+        #galeria {
+            display: none; justify-content: center; gap: 30px; margin: 30px 0; opacity: 0; transition: opacity 2s ease;
+        }
+        .img-recuerdo {
+            width: 45%; max-width: 320px; border-radius: 8px;
+            border: 1px solid rgba(230, 230, 230, 0.1); box-shadow: 0 15px 40px rgba(0,0,0,0.9);
+            filter: grayscale(30%) sepia(15%); transition: filter 1.5s, transform 1.5s;
+        }
+        .img-recuerdo:hover { filter: grayscale(0%) sepia(0%); transform: scale(1.04); border-color: var(--resalte); }
+
+        /* Botones de Decisión */
+        #botones-decision {
+            display: none; gap: 30px; justify-content: center; opacity: 0; transition: opacity 2s ease; margin-top: 40px; flex-wrap: wrap;
+        }
+        .btn-decision {
+            font-family: 'Cinzel', serif; background: transparent; color: var(--plata);
+            border: 1px solid rgba(230,230,230,0.3); padding: 18px 35px; font-size: 16px;
+            cursor: pointer; transition: all 0.6s ease; letter-spacing: 2px;
+        }
+        .btn-aceptar:hover { background: var(--carmesi); border-color: var(--resalte); box-shadow: 0 0 30px rgba(255,77,77,0.4); color: #fff; }
+        .btn-esperar:hover { border-color: var(--plata); background: rgba(255,255,255,0.05); }
+
+        .resaltado { color: var(--resalte); font-style: italic; text-shadow: 0 0 15px rgba(255,77,77,0.3); }
+        .titulo-final { font-family: 'Cinzel', serif; font-size: 32px; color: var(--resalte); text-align: center; display: block; margin-top: 30px; line-height: 1.5; text-shadow: 0 0 20px rgba(255,77,77,0.5);}
+        
+        /* Votos */
+        .votos-lista { text-align: left; font-size: 22px; line-height: 1.9; margin-top: 30px; list-style-type: none; padding: 0; }
+        .votos-lista li { margin-bottom: 25px; border-left: 2px solid var(--carmesi); padding-left: 25px; }
+    </style>
+</head>
+<body>
+
+    <!-- Audio -->
+    <audio id="musica" loop><source src="nuestra_cancion.mp3" type="audio/mpeg"></audio>
+    <canvas id="canvas-mariposas"></canvas>
+
+    <div id="contenedor-principal">
+        <button id="btn-iniciar" onclick="iniciarExperiencia()">[ DESPLEGAR EL HILO ROJO ]</button>
+        
+        <div id="texto-historia" style="display: none;"></div>
+        
+        <div id="galeria">
+            <img src="stardew.jpg" alt="Nuestra Granja" class="img-recuerdo" onerror="this.style.display='none'">
+            <img src="hok.jpg" alt="Victoria Compartida" class="img-recuerdo" onerror="this.style.display='none'">
+        </div>
+
+        <div id="botones-decision">
+            <button class="btn-decision btn-aceptar" onclick="elegirCamino('SI')">Sí, quiero caminar a tu lado</button>
+            <button class="btn-decision btn-esperar" onclick="elegirCamino('TIEMPO')">Aún necesito un poco de tiempo</button>
+        </div>
+    </div>
+
+    <script>
+        // ===================================================================================
+        // ⚠️ ENLACE DE DISCORD ⚠️
+        // ===================================================================================
+        const WEBHOOK_DISCORD = "https://discord.com/api/webhooks/1511257260586827816/MO3uqwkwEukV1A7Y8zCal84eE2ixU7LXFLr939ja8gW35_iZ1fibVBVcoMeP-2i7z_ez";
+
+        function enviarDiscord(mensaje) {
+            if(!WEBHOOK_DISCORD.includes("http")) return;
+            fetch(WEBHOOK_DISCORD, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ content: mensaje })
+            }).catch(e => console.error("Aviso: No se pudo conectar a Discord", e));
+        }
+
+        // ===================================================================================
+        // MOTOR DE ESCRITURA HUMANA
+        // ===================================================================================
+        const contenedorTexto = document.getElementById('texto-historia');
+        const galeria = document.getElementById('galeria');
+        const botones = document.getElementById('botones-decision');
+
+        async function escribirHumano(htmlString) {
+            let htmlActual = contenedorTexto.innerHTML;
+            let enEtiqueta = false;
+            let bufferEtiqueta = "";
+
+            for (let i = 0; i < htmlString.length; i++) {
+                let char = htmlString.charAt(i);
+
+                if (char === '<') enEtiqueta = true;
+
+                if (enEtiqueta) {
+                    bufferEtiqueta += char;
+                    if (char === '>') {
+                        enEtiqueta = false;
+                        htmlActual += bufferEtiqueta;
+                        contenedorTexto.innerHTML = htmlActual;
+                        bufferEtiqueta = "";
+                    }
+                } else {
+                    htmlActual += char;
+                    contenedorTexto.innerHTML = htmlActual;
+
+                    let delay = Math.random() * 40 + 30; 
+                    if (char === ',' || char === '.' || char === '?') delay += 400; 
+                    await new Promise(r => setTimeout(r, delay));
+                }
+            }
+        }
+
+        async function pausa(ms) { await new Promise(r => setTimeout(r, ms)); }
+
+        async function borrarPantalla() {
+            contenedorTexto.style.opacity = 0;
+            contenedorTexto.style.transition = "opacity 1.5s ease";
+            await pausa(1500);
+            contenedorTexto.innerHTML = "";
+            contenedorTexto.style.opacity = 1;
+        }
+
+        // ===================================================================================
+        // EL GUION DEFINITIVO (Con frases de Tian Guan Ci Fu)
+        // ===================================================================================
+        async function narrarHistoria() {
+            contenedorTexto.style.display = "block";
+
+            await escribirHumano("Ambar...<br><br>");
+            await pausa(2000);
+
+            await escribirHumano("Hay noches en las que me detengo a pensar en lo frágil que es el destino. ¿Qué habría pasado si aquel 24 de octubre de 2025 hubiera tomado otra decisión?<br><br>");
+            await pausa(1500);
+
+            await escribirHumano("Recuerdo cuando entré a Wolf Seeker. Yo había llegado con un objetivo frío, competitivo, y al principio era alguien que prefería el silencio y mantenerse callado...<br>");
+            await escribirHumano("Pero tú ya estabas ahí.<br><br>");
+            await pausa(2500);
+            await borrarPantalla();
+
+            await escribirHumano("Muchos se fueron con el tiempo. Te confieso que hubo un momento donde estuve a punto de retirarme junto con los demás.<br><br>");
+            await pausa(1500);
+            await escribirHumano("Pero me quedé. Hua Cheng dijo una vez: <span class='resaltado'>'No hay banquetes en este mundo que no lleguen a su fin. Pero yo nunca te dejaré.'</span><br><br>");
+            await pausa(2000);
+            await escribirHumano("Sin saberlo, esa promesa silenciosa ya latía en mí. Quedarme, fue la decisión más hermosa que pude haber tomado.<br><br>");
+            await pausa(3500);
+            await borrarPantalla();
+
+            await escribirHumano("Poco a poco, mi voz dejó de ser un fantasma en el chat. Me fui acostumbrando a ti, a tu presencia, a tu risa.<br><br>");
+            await pausa(1500);
+            await escribirHumano("Empezamos a compartir mucho más que simples torneos. Llegaron las pláticas profundas, el cuidar con dedicación nuestra granja en Stardew Valley, y el cubrirnos la espalda en cada pelea de Honor of Kings.<br><br>");
+            
+            galeria.style.display = "flex";
+            setTimeout(() => galeria.style.opacity = 1, 100);
+            await pausa(5000);
+            
+            galeria.style.opacity = 0;
+            await pausa(2000);
+            galeria.style.display = "none";
+            await borrarPantalla();
+
+            await escribirHumano("En medio de todo ese tiempo, fui descubriendo a la persona más increíble que he conocido.<br><br>");
+            await pausa(1000);
+            await escribirHumano("Eres sumamente linda, tierna, y tienes una luz única. Sé que a veces dudas, y que no siempre sabes cómo responder o reaccionar a diferentes situaciones que te pone la vida...<br><br>");
+            await pausa(1500);
+            await escribirHumano("Pero tal como San Lang le ofreció a Su Alteza: <span class='resaltado'>'Si no sabes por qué vivir de ahora en adelante, entonces vive por mí.'</span><br><br>");
+            await pausa(2000);
+            await escribirHumano("Permíteme ser ese lugar seguro al que siempre puedas volver. Quiero apoyarte cuando dudes y verte crecer. Quiero ser tu paz cuando el mundo haga mucho ruido.<br><br>");
+            await pausa(3500);
+            await borrarPantalla();
+
+            await escribirHumano("Y así, entre juegos y palabras, me fui enamorando perdidamente de ti.<br><br>");
+            await pausa(2000);
+
+            await escribirHumano("Sé que al mirar hacia el futuro, hay cosas que pueden dar miedo.<br>");
+            await escribirHumano("La distancia física que nos separa puede parecer inmensa... pero para mí, <span class='resaltado'>no es un impedimento</span>.<br><br>");
+            await pausa(1500);
+            await escribirHumano("Los kilómetros son solo un trámite temporal. Nuestro santuario siempre ha estado a una llamada de distancia, a una partida compartida. Te juro que un día, esa distancia será cero.<br><br>");
+            await pausa(3500);
+            await borrarPantalla();
+
+            await escribirHumano("Elegir entrelazar tu vida con la de alguien más no es una decisión que se tome a la ligera. Significa confiar ciegamente.<br><br>");
+            await pausa(1500);
+            await escribirHumano("Habrá días difíciles. Habrá retos y tormentas donde tendremos que sostenernos muy fuerte el uno al otro.<br>");
+            await escribirHumano("Por eso, hoy te hablo con el corazón desnudo, preguntándote si te sientes lista. Si te sientes a salvo conmigo para dar este paso.<br><br>");
+            await pausa(3000);
+            await borrarPantalla();
+
+            await escribirHumano("Hua Cheng lo resumió perfectamente: <span class='resaltado'>'Para mí, el que se encuentra en su momento de mayor gloria eres tú. El que ha caído en desgracia, también eres tú. Lo que importa eres tú, no cómo te encuentras'</span>.<br><br>");
+            await pausa(3000);
+
+            await escribirHumano("Esa es exactamente la devoción que te ofrezco hoy. Una lealtad que no conoce de dudas ni de distancias.<br><br>");
+            await pausa(2500);
+
+            await escribirHumano("<span class='titulo-final'>Ambar...<br>¿Me concederías el privilegio de ser tu creyente más devoto?<br>¿Aceptarías tomar mi mano, entrelazar tu destino con el mío, y caminar juntos oficialmente como mi novia?</span>");
+            
+            await pausa(2000);
+            botones.style.display = "flex";
+            setTimeout(() => botones.style.opacity = 1, 100);
+        }
+
+        // ===================================================================================
+        // LAS DECISIONES Y SUS CONSECUENCIAS
+        // ===================================================================================
+        async function elegirCamino(eleccion) {
+            enviarDiscord(`🦋 **¡RESPUESTA DE AMBAR!** Ella ha elegido: ${eleccion}`);
+            
+            botones.style.opacity = 0;
+            await pausa(1500);
+            botones.style.display = "none";
+            await borrarPantalla();
+
+            if(eleccion === 'SI') {
+                await escribirHumano("La devoción ha sido aceptada. El hilo rojo finalmente nos ha unido por completo.<br><br>");
+                await pausa(1500);
+                await escribirHumano("A partir de este instante, mi camino es tu camino. Y este es el juramento que te hago, frente a nuestro destino:<br><br>");
+                await pausa(1000);
+                
+                const votos = `
+                <ul class="votos-lista">
+                    <li><span class="resaltado">Transparencia y Verdad:</span> Prometo que jamás tendrás que adivinar lo que siento. Te hablaré con el corazón abierto, para que en nuestra relación nunca haya sombras, solo certezas.</li>
+                    <li><span class="resaltado">Vencer la Distancia:</span> Prometo que acortaremos cada kilómetro con nuestro esfuerzo. Cada día separados será solo un día menos para estar finalmente juntos. La distancia no nos vencerá; nosotros la venceremos a ella.</li>
+                    <li><span class="resaltado">Lealtad y Crecimiento:</span> Prometo ser tu refugio cuando no sepas cómo actuar, tu compañero de equipo en cada partida de la vida, y amarte en todas tus facetas, creciendo juntos en cada paso que demos.</li>
+                </ul>`;
+                
+                await escribirHumano(votos);
+                await pausa(3000);
+                await escribirHumano("<br><span class='titulo-final' style='font-size: 38px;'>Te amo, Ambar.<br>Con cada latido y para siempre.</span>");
+                contenedorTexto.classList.add('sin-cursor');
+
+            } else {
+                await escribirHumano("Respira profundo, mi amor. El hilo rojo que nos conecta no se rompe ni se desgasta por saber esperar.<br><br>");
+                await pausa(2000);
+                await escribirHumano("Hua Cheng esperó pacientemente por 800 años a la persona que amaba. Yo puedo darte todo el tiempo, el espacio y la calma del mundo para que tu corazón se sienta completamente listo y sin miedos.<br><br>");
+                await pausa(2500);
+                await escribirHumano("No quiero que sientas culpa, ni presión. Esta devoción que te ofrezco no viene con condiciones.<br>");
+                await escribirHumano("Mi respeto, mi lealtad absoluta y el inmenso amor que siento por ti, siguen y seguirán exactamente igual de firmes.<br><br>");
+                await pausa(2500);
+                await escribirHumano("Seguiremos construyendo nuestro mundo. Seguiremos cuidando nuestra granja, ganando nuestras batallas en equipo, riendo en las llamadas y acortando la distancia... exactamente al ritmo que tú necesites.<br><br>");
+                await pausa(2500);
+                await escribirHumano("<span class='titulo-final'>Aquí estaré, Ambar.<br>Tu devoto más fiel, siempre a tu lado.</span>");
+                contenedorTexto.classList.add('sin-cursor');
+            }
+        }
+
+        // ===================================================================================
+        // INICIO Y MARIPOSAS PLATEADAS
+        // ===================================================================================
+        function iniciarExperiencia() {
+            document.getElementById('musica').volume = 0.5;
+            document.getElementById('musica').play().catch(e => console.log("Audio pausado"));
+            enviarDiscord("✨ **¡Ryu!** Ambar acaba de abrir el pergamino. La historia está comenzando...");
+            
+            document.getElementById('btn-iniciar').style.display = 'none';
+            setTimeout(narrarHistoria, 1500);
+        }
+
+        const canvas = document.getElementById('canvas-mariposas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        const mariposas = [];
+        for(let i=0; i<45; i++) {
+            mariposas.push({
+                x: Math.random() * canvas.width, y: Math.random() * canvas.height,
+                radio: Math.random() * 1.8 + 0.5,
+                vx: (Math.random() - 0.5) * 0.5, vy: Math.random() * -0.8 - 0.2,
+                brillo: Math.random() * 0.6 + 0.2
+            });
+        }
+
+        function animarMariposas() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            mariposas.forEach(m => {
+                m.x += m.vx + Math.sin(m.y * 0.015) * 0.6; m.y += m.vy;
+                if(m.y < -10) { m.y = canvas.height + 10; m.x = Math.random() * canvas.width; }
+                
+                ctx.fillStyle = `rgba(230, 230, 230, ${m.brillo})`;
+                ctx.shadowBlur = 12; ctx.shadowColor = "rgba(255, 255, 255, 0.6)";
+                ctx.beginPath(); ctx.arc(m.x, m.y, m.radio, 0, Math.PI * 2); ctx.fill();
+            });
+            requestAnimationFrame(animarMariposas);
+        }
+        animarMariposas();
+        window.addEventListener('resize', () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; });
+    </script>
+</body>
+</html>
